@@ -52,3 +52,14 @@ resource "azurerm_resource_group" "evidence" {
     purpose = "grc-evidence-plane"
   }
 }
+
+# Lab 6 gate proof only — public blob access is intentional so conftest/CI fail.
+# Do not merge this branch.
+resource "azurerm_storage_account" "gate_test_public" {
+  name                            = "stgrcgatefail001"
+  resource_group_name             = azurerm_resource_group.sandbox.name
+  location                        = var.location
+  account_tier                    = "Standard"
+  account_replication_type        = "LRS"
+  allow_nested_items_to_be_public = true
+}
