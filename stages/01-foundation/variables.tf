@@ -34,3 +34,13 @@ variable "public_blob_policy_effect" {
     error_message = "public_blob_policy_effect must be Audit, Deny, or Disabled."
   }
 }
+
+variable "https_policy_effect" {
+  description = "Candidate-added control: storage must require HTTPS. Earned Deny — HTTP on the wire is a clear-cut data-protection failure."
+  type        = string
+  default     = "Deny"
+  validation {
+    condition     = contains(["Audit", "Deny", "Disabled"], var.https_policy_effect)
+    error_message = "https_policy_effect must be Audit, Deny, or Disabled."
+  }
+}

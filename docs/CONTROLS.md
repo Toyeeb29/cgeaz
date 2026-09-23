@@ -11,6 +11,7 @@ and it's a first-class criterion on the capstone rubric.
 | Management group hierarchy + initiative assignment | Controls inherit to every current and future subscription — compliance by design | GV.PO, GV.OC |
 | `cge-require-env-tag-rg` (Audit) | Inventory hygiene; owner accountability feeds the POA&M | ID.AM |
 | `cge-deny-public-blob` (Deny) | Prevents public blob exposure at the API, before the resource exists | PR.DS |
+| `cge-deny-http-storage` (Deny) — **candidate-added** | Storage must require HTTPS; HTTP on the wire is blocked at the API | PR.DS |
 | `cge-dine-storage-diagnostics` (DeployIfNotExists) | Logging that enforces its own coverage | PR.PS, DE.CM |
 | Remediation identity (user-assigned, whitelist roles) | Every automated change has a named, auditable author | PR.AA, GV.RR |
 | Log Analytics workspace + Activity Log routing | Central audit trail beyond the 90-day default | DE.CM, PR.PS |
@@ -43,7 +44,7 @@ and it's a first-class criterion on the capstone rubric.
 
 | Rule | Mistake it makes unmergeable | CSF 2.0 |
 |---|---|---|
-| `storage.rego` | Pipeline storage below the pipeline's own standard | PR.DS |
+| `storage.rego` | Pipeline storage below the pipeline's own standard (public blob, shared keys, **HTTPS**) | PR.DS |
 | `policy_identity.rego` | Remediation that silently never runs | PR.PS |
 | `broad_roles.rego` | Owner/Contributor grants in governance code | PR.AA |
 | `drift.yml` + KQL tripwire | Out-of-band change going unnoticed | DE.CM, DE.AE |

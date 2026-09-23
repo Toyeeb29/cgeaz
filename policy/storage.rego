@@ -14,6 +14,13 @@ deny contains msg if {
 deny contains msg if {
 	some rc in input.resource_changes
 	rc.type == "azurerm_storage_account"
+	rc.change.after.https_traffic_only_enabled == false
+	msg := sprintf("%s: storage accounts must require HTTPS", [rc.address])
+}
+
+deny contains msg if {
+	some rc in input.resource_changes
+	rc.type == "azurerm_storage_account"
 	rc.change.after.shared_access_key_enabled == true
 	not startswith(rc.name, "func_internal")
 	msg := sprintf("%s: shared key access must be disabled (identity or nothing) — func runtime storage is the documented exception", [rc.address])

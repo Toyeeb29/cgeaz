@@ -57,6 +57,39 @@ resource "azurerm_policy_definition" "deny_public_blob" {
   })
 }
 
+# --- Candidate-added control: deny HTTP (non-HTTPS) on storage accounts ---
+# Public blob is "who can see the files." This is "how they travel." Two different
+# PR.DS failures. Escalation is the same reviewed variable pattern as the starter.
+# blast radius: rejects creates/updates that set supportsHttpsTrafficOnly=false
+# on storage under mg-grc-sandbox. Does not modify existing accounts, does not
+# read data. rollback: set https_policy_effect to Audit or Disabled and apply.
+
+resource "azurerm_policy_definition" "deny_http_storage" {
+  name                = "cge-deny-http-storage"
+  display_name        = "Storage accounts must require HTTPS"
+  policy_type         = "Custom"
+  mode                = "Indexed"
+  management_group_id = azurerm_management_group.sandbox.id
+
+  parameters = jsonencode({
+    effect = {
+      type          = "String"
+      allowedValues = ["Audit", "Deny", "Disabled"]
+      defaultValue  = "Deny"
+    }
+  })
+
+  policy_rule = jsonencode({
+    if = {
+      allOf = [
+        { field = "type", equals = "Microsoft.Storage/storageAccounts" },
+        { field = "Microsoft.Storage/storageAccounts/supportsHttpsTrafficOnly", equals = "false" }
+      ]
+    }
+    then = { effect = "[parameters('effect')]" }
+  })
+}
+
 # --- 3. deployIfNotExists: storage accounts missing diagnostic settings get them, routed to the GRC workspace ---
 # Logging that enforces its own coverage. Remediation runs AS the identity in identity.tf.
 
@@ -140,10 +173,12 @@ resource "azurerm_management_group_policy_set_definition" "grc_baseline" {
   parameters = jsonencode({
     tagEffect        = { type = "String", defaultValue = "Audit" }
     publicBlobEffect = { type = "String", defaultValue = "Deny" }
+    httpsEffect      = { type = "String", defaultValue = "Deny" }
     workspaceId      = { type = "String" }
   })
 
   policy_definition_reference {
+    reference_id         = "require-env-tag"
     policy_definition_id = azurerm_policy_definition.require_env_tag.id
     parameter_values = jsonencode({
       effect = { value = "[parameters('tagEffect')]" }
@@ -151,6 +186,7 @@ resource "azurerm_management_group_policy_set_definition" "grc_baseline" {
   }
 
   policy_definition_reference {
+    reference_id         = "deny-public-blob"
     policy_definition_id = azurerm_policy_definition.deny_public_blob.id
     parameter_values = jsonencode({
       effect = { value = "[parameters('publicBlobEffect')]" }
@@ -158,6 +194,15 @@ resource "azurerm_management_group_policy_set_definition" "grc_baseline" {
   }
 
   policy_definition_reference {
+    reference_id         = "deny-http-storage"
+    policy_definition_id = azurerm_policy_definition.deny_http_storage.id
+    parameter_values = jsonencode({
+      effect = { value = "[parameters('httpsEffect')]" }
+    })
+  }
+
+  policy_definition_reference {
+    reference_id         = "dine-storage-diagnostics"
     policy_definition_id = azurerm_policy_definition.storage_diagnostics.id
     parameter_values = jsonencode({
       workspaceId = { value = "[parameters('workspaceId')]" }
@@ -175,6 +220,7 @@ resource "azurerm_management_group_policy_assignment" "grc_baseline" {
   parameters = jsonencode({
     tagEffect        = { value = var.tag_policy_effect }
     publicBlobEffect = { value = var.public_blob_policy_effect }
+    httpsEffect      = { value = var.https_policy_effect }
     workspaceId      = { value = azurerm_log_analytics_workspace.grc.id }
   })
 
